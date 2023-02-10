@@ -33,6 +33,11 @@ export function getMolecularSurfaceParams(ctx: ThemeRegistryContext, structure: 
 
 export type MolecularSurfaceRepresentation = StructureRepresentation<MolecularSurfaceParams>
 export function MolecularSurfaceRepresentation(ctx: RepresentationContext, getParams: RepresentationParamsGetter<Structure, MolecularSurfaceParams>): MolecularSurfaceRepresentation {
+    console.debug('sl MolecularSurfaceRepresentation');
+    console.debug('sl ctx:');
+    console.debug(ctx);
+    console.debug('sl getParams:');
+    console.debug(getParams);
     return Representation.createMulti('Molecular Surface', ctx, getParams, StructureRepresentationStateBuilder, MolecularSurfaceVisuals as unknown as Representation.Def<Structure, MolecularSurfaceParams>);
 }
 

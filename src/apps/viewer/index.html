@@ -37,79 +37,126 @@
         <link rel="stylesheet" type="text/css" href="molstar.css" />
     </head>
     <body>
-        <div id="app"></div>
+        <div id="molstar-app"></div>
         <script type="text/javascript" src="./molstar.js"></script>
         <script type="text/javascript">
-            function getParam(name, regex) {
-                var r = new RegExp(name + '=' + '(' + regex + ')[&]?', 'i');
-                return decodeURIComponent(((window.location.search || '').match(r) || [])[1] || '');
-            }
 
-            var debugMode = getParam('debug-mode', '[^&]+').trim() === '1';
-            if (debugMode) molstar.setDebugMode(debugMode);
+        molstar.Viewer.create("molstar-app", {
+            // customFormats: CustomFormats,
+            // extensions: ?,
+            //  'backgrounds'
+            //  'cellpack'
+            //  'dnatco-confal-pyramids'
+            //  'pdbe-structure-quality-report'
+            //  'rcsb-assembly-symmetry'
+            //  'rcsb-validation-report'
+            //  'anvil-membrane-orientation'
+            //  'g3d'
+            //  'model-export'
+            //  'mp4-export'
+            //  'geo-export'
+            //  'ma-quality-assessment'
+            //  'zenodo-import'
+            layoutIsExpanded: true,
+            layoutShowControls: false,
+            layoutShowRemoteState: false,
+            // layoutControlsDisplay:
+            //  'outside'
+            //  'portrait'
+            //  'landscape'
+            //  'reactive'
+            layoutShowSequence: true,
+            layoutShowLog: false,
+            layoutShowLeftPanel: true,
+            // collapseLeftPanel:
+            // collapseRightPanel:
+            // disableAntialiasing:
+            // pixelScale:
+            // pickScale:
+            // pickPadding:
+            // enableWboit:
+            // enableDpoit:
+            // preferWebgl1:
+            // allowMajorPerformanceCaveat:
+            // powerPreference:
+            viewportShowExpand: true,
+            // viewportShowControls:
+            // viewportShowSettings:
+            viewportShowSelectionMode: true,
+            viewportShowAnimation: false,
+            // viewportShowTrajectoryControls:
+            // pluginStateServer:
+            // volumeStreamingServer:
+            // volumeStreamingDisabled:
+            pdbProvider: "rcsb",
+                // "rcsb"
+                // "pdbe"
+                // "pdbj"
+            emdbProvider: "rcsb",
+                // "rcsb"
+                // "pdbe"
+                // "pdbj"
+            // saccharideCompIdMapType:
+        }).then(viewer => {
+            viewer.loadPdb('8FG2').then(() => {
 
-            var timingMode = getParam('timing-mode', '[^&]+').trim() === '1';
-            if (timingMode) molstar.setTimingMode(timingMode);
+                // 8FD5 - Nucleocapsid
+                // 8FG2 - Nucleocapsid dimer
+                let epitope_map = [
+                    [36, 41],
+                    [316, 316],
+                    [321, 332],
+                    [335, 337],
+                    [340, 341]
+                ];
+                // Apply offset to epitope mapping based on the given protein sequence
+                let protein_sequence_offset = 0
+                // Get epitope mapping of ranges that are within the given protein sequence
+                let index_ranges_of_epitope_ranges_to_remove = [
+                    [0,0]
+                ]
 
-            var hideControls = getParam('hide-controls', '[^&]+').trim() === '1';
-            var collapseLeftPanel = getParam('collapse-left-panel', '[^&]+').trim() === '1';
-            var pdbProvider = getParam('pdb-provider', '[^&]+').trim().toLowerCase();
-            var emdbProvider = getParam('emdb-provider', '[^&]+').trim().toLowerCase();
-            var mapProvider = getParam('map-provider', '[^&]+').trim().toLowerCase();
-            var pixelScale = getParam('pixel-scale', '[^&]+').trim();
-            var pickScale = getParam('pick-scale', '[^&]+').trim();
-            var pickPadding = getParam('pick-padding', '[^&]+').trim();
-            var disableWboit = getParam('disable-wboit', '[^&]+').trim() === '1';
-            var enableDpoit = getParam('enable-dpoit', '[^&]+').trim() === '1';
-            var preferWebgl1 = getParam('prefer-webgl1', '[^&]+').trim() === '1' || void 0;
-            var allowMajorPerformanceCaveat = getParam('allow-major-performance-caveat', '[^&]+').trim() === '1';
-            var powerPreference = getParam('power-preference', '[^&]+').trim().toLowerCase();
+                // // 6XR8 - Spike Protein Prefusion
+                // let epitope_map = [
+                //     [417, 417],
+                //     [446, 446],
+                //     [449, 449],
+                //     [453, 453],
+                //     [455, 456],
+                //     [475, 475],
+                //     [489, 489],
+                //     [493, 493],
+                //     [496, 496],
+                //     [498, 498],
+                //     [500, 502],
+                //     [505, 505],
+                // ];
+                // Apply offset to epitope mapping based on the given protein sequence
+                let protein_sequence_offset = 0
+                // Get epitope mapping of ranges that are within the given protein sequence
+                let index_ranges_of_epitope_ranges_to_remove = [
+                    [0, 0]
+                ]
 
-            molstar.Viewer.create('app', {
-                layoutShowControls: !hideControls,
-                viewportShowExpand: false,
-                collapseLeftPanel: collapseLeftPanel,
-                pdbProvider: pdbProvider || 'pdbe',
-                emdbProvider: emdbProvider || 'pdbe',
-                volumeStreamingServer: (mapProvider || 'pdbe') === 'rcsb'
-                    ? 'https://maps.rcsb.org'
-                    : 'https://www.ebi.ac.uk/pdbe/densities',
-                pixelScale: parseFloat(pixelScale) || 1,
-                pickScale: parseFloat(pickScale) || 0.25,
-                pickPadding: isNaN(parseFloat(pickPadding)) ? 1 : parseFloat(pickPadding),
-                enableWboit: (disableWboit || enableDpoit) ? false : void 0, // use default value if disable-wboit is not set
-                enableDpoit: enableDpoit ? true : void 0,
-                preferWebgl1: preferWebgl1,
-                allowMajorPerformanceCaveat: allowMajorPerformanceCaveat,
-                powerPreference: powerPreference || 'high-performance',
-            }).then(viewer => {
-                var snapshotId = getParam('snapshot-id', '[^&]+').trim();
-                if (snapshotId) viewer.setRemoteSnapshot(snapshotId);
+                let epitope_map_offset = epitope_map
+                for (let i = 0; i < epitope_map_offset.length; i++) {
+                    let start = epitope_map_offset[i][0] - protein_sequence_offset
+                    let stop = epitope_map_offset[i][1] - protein_sequence_offset
+                    epitope_map_offset[i][0] = start
+                    epitope_map_offset[i][1] = stop
+                }
 
-                var snapshotUrl = getParam('snapshot-url', '[^&]+').trim();
-                var snapshotUrlType = getParam('snapshot-url-type', '[^&]+').toLowerCase().trim() || 'molj';
-                if (snapshotUrl && snapshotUrlType) viewer.loadSnapshotFromUrl(snapshotUrl, snapshotUrlType);
 
-                var structureUrl = getParam('structure-url', '[^&]+').trim();
-                var structureUrlFormat = getParam('structure-url-format', '[a-z]+').toLowerCase().trim();
-                var structureUrlIsBinary = getParam('structure-url-is-binary', '[^&]+').trim() === '1';
-                if (structureUrl) viewer.loadStructureFromUrl(structureUrl, structureUrlFormat, structureUrlIsBinary);
+                for (let i = 0; i < index_ranges_of_epitope_ranges_to_remove.length; i++) {
+                    indeces = index_ranges_of_epitope_ranges_to_remove[i]
+                    epitope_map_offset.splice(indeces[0], indeces[1])
+                }
 
-                var pdb = getParam('pdb', '[^&]+').trim();
-                if (pdb) viewer.loadPdb(pdb);
+                viewer.highlightEpitope(epitope_map_offset);
 
-                var pdbDev = getParam('pdb-dev', '[^&]+').trim();
-                if (pdbDev) viewer.loadPdbDev(pdbDev);
-
-                var emdb = getParam('emdb', '[^&]+').trim();
-                if (emdb) viewer.loadEmdb(emdb);
-
-                var afdb = getParam('afdb', '[^&]+').trim();
-                if (afdb) viewer.loadAlphaFoldDb(afdb);
-
-                var modelArchive = getParam('model-archive', '[^&]+').trim();
-                if (modelArchive) viewer.loadModelArchive(modelArchive);
             });
+        });
+
         </script>
         <!-- __MOLSTAR_ANALYTICS__ -->
     </body>

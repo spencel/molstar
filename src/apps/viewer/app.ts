@@ -49,6 +49,16 @@ import { ObjectKeys } from '../../mol-util/type-helpers';
 import { SaccharideCompIdMapType } from '../../mol-model/structure/structure/carbohydrates/constants';
 import { Backgrounds } from '../../extensions/backgrounds';
 
+// Rosalind Imports
+import { StateObjectCell } from '../../mol-state';
+import { Script } from '../../mol-script/script';
+import { ColorNames } from '../../mol-util/color/names';
+import {
+    OverpaintStructureRepresentation3DFromScript, StructureRepresentation3D
+} from '../../mol-plugin-state/transforms/representation';
+import { MolecularSurfaceRepresentationProvider } from '../../mol-repr/structure/representation/molecular-surface';
+// End Rosalind Imports
+
 export { PLUGIN_VERSION as version } from '../../mol-plugin/version';
 export { setDebugMode, setProductionMode, setTimingMode, consoleStats } from '../../mol-util/debug';
 
@@ -223,6 +233,154 @@ export class Viewer {
                 }
             }
         }));
+    }
+
+    /**
+        This function highlights an epitope
+     */
+    async highlightEpitope(
+        lociList: Array<number[]> // [[75, 86], ...]
+    ) {
+
+        // Example of using jQuery-like methods to get objects
+        const allRepresentations = this.plugin.state.data.selectQ(q => q.ofType(
+            PluginStateObject.Molecule.Structure.Representation3D
+        ));
+        console.debug('sl allRepresentations:');
+        console.debug(allRepresentations);
+
+        // Get cartoon and water cells
+        const cells = this.plugin.state.data.cells;
+        let cartoonCell: StateObjectCell;
+        let waterCell: StateObjectCell;
+        let carbohydrateCell: StateObjectCell;
+
+        // Get keys of map entry by index
+        const cellKeys = Array.from(cells.keys());
+        console.debug('sl cellKeys:');
+        console.debug(cellKeys); //sl
+        let cartoonCellIsAlreadySet = false;
+        let waterCellIsAlreadySet = false;
+        let carbohydrateCellIsAlreadySet = false;
+
+        // Loop through cells
+        for (let i = 0; i < cellKeys.length; i++) {
+            const cellKey = cellKeys[i];
+            const cell = cells.get(cellKey);
+            console.debug('sl cell: ' + cellKey);
+            console.debug(cell); //sl
+            const label = cell!.obj!.label
+            const typeClass = cell!.obj!.type!.typeClass
+
+            // Get cartoon cell
+            if (cell!.obj!.label === 'Cartoon') {
+                // @ts-ignore
+                cartoonCell = cell;
+                if (cartoonCellIsAlreadySet === true) {
+                    throw new Error('Unexpected: multiple cells labeled "Cartoon"');
+                }
+                cartoonCellIsAlreadySet = true;
+                continue;
+            }
+
+            // Get water cell
+            // Water cell is found from child representation
+            const sourceRef = cell!.sourceRef;
+            // Skip if this cell has no parent
+            if (sourceRef === undefined) {
+                continue;
+            }
+            const sourceCell = cells.get(sourceRef);
+            if (sourceCell!.obj!.label === 'Water') {
+                // @ts-ignore
+                waterCell = cell;
+                if (waterCellIsAlreadySet === true) {
+                    throw new Error('Unexpected: multiple cells labeled "Water"');
+                }
+                waterCellIsAlreadySet = true;
+            }
+
+            // Get carbohydrate cell
+            if (
+                typeClass === 'Representation3D'
+                && label === 'Carbohydrate'
+            ) {
+                // @ts-ignore
+                carbohydrateCell = cell;
+                if (carbohydrateCellIsAlreadySet === true) {
+                    throw new Error('Unexpected: multiple cells labeled "Water"');
+                }
+                carbohydrateCellIsAlreadySet = true;
+            }
+        }
+
+        // Hide water
+        // @ts-ignore
+        if (waterCell !== undefined) {
+            waterCell!.obj!.data.repr.setState({ visible: false });
+        }
+
+        // Hide carbohydrate symbology
+        // @ts-ignore
+        if (carbohydrateCell !== undefined) {
+            carbohydrateCell!.obj!.data.repr.setState({ visible: false });
+        }
+
+        // Set uniform color of cartoon cell
+        // @ts-ignore
+        if (cartoonCell !== undefined) {
+            // const cartoonRepresentation = MolecularSurfaceRepresentationProvider.factory(
+            //     this.plugin.reprCtx, MolecularSurfaceRepresentationProvider.getParams
+            // );
+            // cartoonRepresentation.setTheme({
+            //   color: this.reprCtx.colorThemeRegistry.create('element-symbol', { structure }),
+            //   size: this.reprCtx.sizeThemeRegistry.create('uniform', { structure })
+            // })
+            // await cartoonRepresentation.createOrUpdate({ ...CartoonRepresentationProvider.defaultValues, quality: 'auto' }, structure).run();
+            // this.canvas3d.add(cartoonRepresentation);
+
+        }
+
+        // Set script language
+        const language = 'mol-script';
+
+        // Create params object
+        const params = {
+            layers: []
+        };
+        for (let i = 0; i < lociList.length; i++) {
+            const loci = lociList[i];
+            const start = loci[0];
+            const stop = loci[1];
+            // @ts-ignore
+            params.layers.push({
+                script: Script(
+                    `(sel.atom.res (in-range atom.resno ${start} ${stop}))`,
+                    language
+                ),
+                color: ColorNames.red,
+                clear: false
+            });
+        }
+
+        // Build the viewer plugin for applying changes
+        const update = this.plugin.build();
+
+        // Molecular surface
+        update.to(cartoonCell).update({
+            type: { name: 'molecular-surface', params: { alpha: 1 } },
+            colorTheme: { name: 'entity-id', params: {} },
+        });
+
+        // Apply overpaint to epitope
+        // @ts-ignore
+        update.to(cartoonCell).apply(OverpaintStructureRepresentation3DFromScript, params);
+
+        // Commit changes
+        await update.commit();
+
+
+
     }
 
     async loadAllModelsOrAssemblyFromUrl(url: string, format: BuiltInTrajectoryFormat = 'mmcif', isBinary = false, options?: LoadStructureOptions) {
